@@ -43,7 +43,7 @@ Place `anigap.py`, `icon.ico`, and `build_exe.bat` in the same folder, then doub
 1. Install all dependencies + PyInstaller
 2. Bundle everything into a single `.exe`
 
-The finished executable will be at `dist/AniGap.exe`.
+The finished executable will be at `dist/AniGap v6.exe`.
 
 ## Usage
 
