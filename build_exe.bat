@@ -28,7 +28,7 @@ py -m PyInstaller ^
     --hidden-import=PIL ^
     --hidden-import=PIL._tkinter_finder ^
     --hidden-import=pyperclip ^
-    anilist_neon.py
+    anigap.py
 
 if errorlevel 1 (
     echo.

@@ -33,12 +33,12 @@ pip install customtkinter requests pyperclip pillow
 Then run:
 
 ```bash
-python anilist_neon.py
+python anigap.py
 ```
 
 ## Building a Standalone EXE (Windows)
 
-Place `anilist_neon.py`, `icon.ico`, and `build_exe.bat` in the same folder, then double-click `build_exe.bat` (or run it from a terminal). It will:
+Place `anigap.py`, `icon.ico`, and `build_exe.bat` in the same folder, then double-click `build_exe.bat` (or run it from a terminal). It will:
 
 1. Install all dependencies + PyInstaller
 2. Bundle everything into a single `.exe`
