@@ -1,4 +1,4 @@
-# AniList Compare
+# AniGap
 
 A sleek, Miami Vice–themed desktop app that finds anime **none** of your friends have watched — so you can all discover something new together.
 
@@ -43,7 +43,7 @@ Place `anilist_neon.py`, `icon.ico`, and `build_exe.bat` in the same folder, the
 1. Install all dependencies + PyInstaller
 2. Bundle everything into a single `.exe`
 
-The finished executable will be at `dist/AniListCompare.exe`.
+The finished executable will be at `dist/AniGap.exe`.
 
 ## Usage
 

@@ -26,7 +26,7 @@ THEME = {
 class NeonAniList(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("AniList Compare v5.0")
+        self.title("AniGap")
         self.geometry("650x780")
         self.resizable(False, False)  # Disable resizing
         
@@ -59,7 +59,7 @@ class NeonAniList(ctk.CTk):
         self.main_frame.pack(fill="both", expand=True, padx=15, pady=15)
 
         # --- HEADER ---
-        self.lbl_title = ctk.CTkLabel(self.main_frame, text="AniList Compare", 
+        self.lbl_title = ctk.CTkLabel(self.main_frame, text="AniGap", 
                                       font=("Segoe UI", 44, "bold"), text_color=THEME["cyan"])
         self.lbl_title.pack(pady=(10, 0))
         

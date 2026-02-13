@@ -1,6 +1,6 @@
 @echo off
 echo ============================================
-echo   AniList Compare - EXE Builder
+echo   AniGap - EXE Builder
 echo ============================================
 echo.
 
@@ -21,7 +21,7 @@ py -m PyInstaller ^
     --noconfirm ^
     --onefile ^
     --windowed ^
-    --name "AniListCompare" ^
+    --name "AniGap" ^
     --icon "icon.ico" ^
     --add-data "icon.ico;." ^
     --add-data "%CTK_PATH%;customtkinter/" ^
@@ -40,6 +40,6 @@ if errorlevel 1 (
 echo.
 echo ============================================
 echo   SUCCESS! Your EXE is in the dist\ folder
-echo   dist\AniListCompare.exe
+echo   dist\AniGap.exe
 echo ============================================
 pause
