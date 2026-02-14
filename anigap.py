@@ -310,9 +310,9 @@ class NeonAniList(ctk.CTk):
                     if len(found_titles) >= result_limit: break
                     if anime['id'] in seen or anime['nextAiringEpisode']: continue
                     
-                    # Check if this anime has any prequels or parent series
-                    has_unseen_prerequisite = any(
-                        e['relationType'] in ['PREQUEL', 'PARENT'] and e['node']['id'] not in seen 
+                    # Check if this anime has any prequels or parent series (skip all sequels/spin-offs)
+                    has_prerequisite = any(
+                        e['relationType'] in ['PREQUEL', 'PARENT']
                         for e in anime['relations']['edges']
                     )
                     
@@ -364,8 +364,8 @@ class NeonAniList(ctk.CTk):
                         # Passed all movie filters
                         found_titles.append(anime)
                     
-                    # For non-movies, use the original logic
-                    elif not has_unseen_prerequisite:
+                    # For non-movies, use the same logic: skip anything with a prequel/parent
+                    elif not has_prerequisite:
                         found_titles.append(anime)
                 if not r.json()['data']['Page']['pageInfo']['hasNextPage']: break
                 current_page += 1
