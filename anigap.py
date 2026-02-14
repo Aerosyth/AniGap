@@ -462,14 +462,11 @@ class NeonAniList(ctk.CTk):
             # Skip if it's an error/status message
             if isinstance(card, ctk.CTkLabel):
                 continue
-            # Extract text from card widgets
+            # Recursively extract text from all labels in the card
             try:
-                for widget in card.winfo_children():
-                    if isinstance(widget, ctk.CTkFrame):
-                        for child in widget.winfo_children():
-                            if isinstance(child, ctk.CTkLabel):
-                                results_text += child.cget("text") + " "
-                results_text = results_text.strip() + "\n"
+                labels = []
+                self._collect_labels(card, labels)
+                results_text += " ".join(l.cget("text") for l in labels).strip() + "\n"
             except:
                 pass
         
@@ -478,6 +475,14 @@ class NeonAniList(ctk.CTk):
             self.btn_copy.configure(text="✓ COPIED!", fg_color=THEME["cyan"], text_color=THEME["bg"])
             self.after(2000, lambda: self.btn_copy.configure(text="COPY", fg_color="transparent", text_color=THEME["cyan"]))
     
+    def _collect_labels(self, widget, labels):
+        """Recursively collect all CTkLabel widgets from a container"""
+        for child in widget.winfo_children():
+            if isinstance(child, ctk.CTkLabel):
+                labels.append(child)
+            elif isinstance(child, ctk.CTkFrame):
+                self._collect_labels(child, labels)
+
     def open_url(self, url):
         """Open URL in default browser"""
         import webbrowser
