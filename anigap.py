@@ -26,7 +26,7 @@ THEME = {
 class NeonAniList(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("AniGap v7")
+        self.title("AniGap v8")
         self.geometry("650x780")
         self.resizable(False, False)  # Disable resizing
         
