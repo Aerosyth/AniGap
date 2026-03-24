@@ -26,7 +26,7 @@ THEME = {
 class NeonAniList(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("AniGap v8")
+        self.title("AniGap v9")
         self.geometry("650x780")
         self.resizable(False, False)  # Disable resizing
         
@@ -113,6 +113,7 @@ class NeonAniList(ctk.CTk):
         
         # Store result cards for later clearing
         self.result_cards = []
+        self.result_data = []
     
     def set_format(self, fmt):
         """Update format selection and button states"""
@@ -151,9 +152,9 @@ class NeonAniList(ctk.CTk):
         
         self.user_entries = []
         for i in range(1, 5):
-            entry = ctk.CTkEntry(left_frame, placeholder_text=f"Username {i}" + (" (optional)" if i > 2 else ""), 
+            entry = ctk.CTkEntry(left_frame, placeholder_text=f"Username {i}" + (" (optional)" if i > 1 else ""), 
                                      width=260, height=32, corner_radius=18,
-                                     border_color=THEME["pink"] if i <= 2 else THEME["purple"], border_width=2,
+                                     border_color=THEME["pink"] if i <= 1 else THEME["purple"], border_width=2,
                                      fg_color=THEME["input_bg"], 
                                      text_color=THEME["text"],
                                      placeholder_text_color="#666666",
@@ -213,6 +214,7 @@ class NeonAniList(ctk.CTk):
         for card in self.result_cards:
             card.destroy()
         self.result_cards = []
+        self.result_data = []
         
         # Show searching message
         searching_label = ctk.CTkLabel(self.results, text="⚡ CONNECTING TO ANILIST GRID...",
@@ -224,13 +226,14 @@ class NeonAniList(ctk.CTk):
 
     def run_logic(self):
         usernames = [entry.get().strip() for entry in self.user_entries if entry.get().strip()]
-        if len(usernames) < 2:
+        if len(usernames) < 1:
             # Clear searching message
             for card in self.result_cards:
                 card.destroy()
             self.result_cards = []
+            self.result_data = []
             
-            error_label = ctk.CTkLabel(self.results, text="❌ ERROR: AT LEAST TWO USERS REQUIRED",
+            error_label = ctk.CTkLabel(self.results, text="❌ ERROR: AT LEAST ONE USER REQUIRED",
                                       font=("Arial", 12, "bold"), text_color=THEME["pink"])
             error_label.pack(pady=20)
             self.result_cards.append(error_label)
@@ -248,6 +251,7 @@ class NeonAniList(ctk.CTk):
             for card in self.result_cards:
                 card.destroy()
             self.result_cards = []
+            self.result_data = []
             
             error_label = ctk.CTkLabel(self.results, text="❌ ERROR: INVALID NUMBERS",
                                       font=("Arial", 12, "bold"), text_color=THEME["pink"])
@@ -291,7 +295,7 @@ class NeonAniList(ctk.CTk):
           Page(page: $page, perPage: 50) {{
             pageInfo {{ hasNextPage }}
             media({', '.join(base_media_args)}) {{
-              id, title {{ romaji }}, episodes, averageScore, startDate {{ year }},
+              id, title {{ english romaji }}, episodes, averageScore, startDate {{ year }},
               nextAiringEpisode {{ id }}, 
               relations {{ edges {{ relationType node {{ id format }} }} }},
               genres
@@ -350,15 +354,16 @@ class NeonAniList(ctk.CTk):
                             continue
                         
                         # Also filter out common sequel/recap indicators in the title
-                        title_lower = anime['title']['romaji'].lower()
+                        title_romaji = anime['title']['romaji'].lower() if anime['title'].get('romaji') else ''
+                        title_english = anime['title'].get('english', '').lower() if anime['title'].get('english') else ''
                         skip_keywords = [
                             'season', 'part', 'vol', 'volume', 'arc',
                             'recap', 'compilation', 'summary',
                             ': the movie', '- the movie',
                         ]
                         
-                        # Skip if title contains indicators it's part of a series
-                        if any(keyword in title_lower for keyword in skip_keywords):
+                        # Skip if either title contains indicators it's part of a series
+                        if any(keyword in title_romaji or keyword in title_english for keyword in skip_keywords):
                             continue
                         
                         # Passed all movie filters
@@ -375,6 +380,7 @@ class NeonAniList(ctk.CTk):
         for card in self.result_cards:
             card.destroy()
         self.result_cards = []
+        self.result_data = []
         
         if not found_titles:
             no_results = ctk.CTkLabel(self.results, text="No titles found matching your criteria",
@@ -389,7 +395,7 @@ class NeonAniList(ctk.CTk):
         """Create a modern card for each anime result"""
         score = anime['averageScore'] if anime['averageScore'] else 0
         year = anime['startDate']['year'] if anime['startDate']['year'] else "????"
-        title = anime['title']['romaji']
+        title = anime['title'].get('english') or anime['title']['romaji']
         episodes = anime['episodes']
         anime_id = anime['id']
         genres = anime.get('genres', [])[:3]  # Get first 3 genres
@@ -447,6 +453,9 @@ class NeonAniList(ctk.CTk):
             genres_label.pack(expand=True, fill="both")
         
         self.result_cards.append(card)
+        # Store structured data for clipboard copy
+        url = f"https://anilist.co/anime/{anime_id}"
+        self.result_data.append({'title': title, 'score': score, 'year': year, 'episodes': episodes, 'url': url})
 
     def fetch_seen(self, user):
         q = 'query($u:String){MediaListCollection(userName:$u,type:ANIME){lists{entries{mediaId}}}}'
@@ -456,33 +465,21 @@ class NeonAniList(ctk.CTk):
         except: return set()
 
     def copy_to_clipboard(self):
-        # Gather all results into text format
-        results_text = ""
-        for card in self.result_cards:
-            # Skip if it's an error/status message
-            if isinstance(card, ctk.CTkLabel):
-                continue
-            # Recursively extract text from all labels in the card
-            try:
-                labels = []
-                self._collect_labels(card, labels)
-                results_text += " ".join(l.cget("text") for l in labels).strip() + "\n"
-            except:
-                pass
+        # Build text from stored result data, including URLs
+        if not self.result_data:
+            return
+        
+        lines = []
+        for item in self.result_data:
+            lines.append(f"{item['score']}% - {item['title']} ({item['year']}, {item['episodes']} eps) - {item['url']}")
+        
+        results_text = "\n".join(lines)
         
         if results_text:
             pyperclip.copy(results_text)
             self.btn_copy.configure(text="✓ COPIED!", fg_color=THEME["cyan"], text_color=THEME["bg"])
             self.after(2000, lambda: self.btn_copy.configure(text="COPY", fg_color="transparent", text_color=THEME["cyan"]))
     
-    def _collect_labels(self, widget, labels):
-        """Recursively collect all CTkLabel widgets from a container"""
-        for child in widget.winfo_children():
-            if isinstance(child, ctk.CTkLabel):
-                labels.append(child)
-            elif isinstance(child, ctk.CTkFrame):
-                self._collect_labels(child, labels)
-
     def open_url(self, url):
         """Open URL in default browser"""
         import webbrowser
