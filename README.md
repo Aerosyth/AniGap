@@ -1,6 +1,6 @@
 # AniGap
 
-A sleek, Miami Vice–themed desktop app that finds anime **none** of your friends have watched — so you can all discover something new together.
+A sleek, Miami Vice–themed desktop app that finds anime you haven't watched — solo or with friends. Compare 1–4 AniList accounts and discover something new.
 
 Enter 1–4 AniList usernames, set your filters, and get a curated list of unwatched anime sorted by score.
 
