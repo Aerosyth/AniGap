@@ -27,7 +27,7 @@ class NeonAniList(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("AniGap v10")
-        self.geometry("650x810")
+        self.geometry("650x840")
         self.resizable(False, False)  # Disable resizing
         
         # Set window icon
@@ -92,7 +92,7 @@ class NeonAniList(ctk.CTk):
         # Set initial selected state
         self.set_format("TV+OVA")
 
-        # --- SEQUEL TOGGLE ---
+        # --- SEQUEL TOGGLES ---
         sequel_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         sequel_frame.pack(pady=(2, 0))
         
@@ -104,8 +104,21 @@ class NeonAniList(ctk.CTk):
                                             progress_color=THEME["pink"],
                                             button_color=THEME["cyan"],
                                             button_hover_color="#00b8d9",
-                                            variable=self.sequel_var)
+                                            variable=self.sequel_var,
+                                            command=self.on_sequel_toggle)
         self.sequel_switch.pack()
+
+        self.sequels_only_var = tk.BooleanVar(value=False)
+        self.sequels_only_switch = ctk.CTkSwitch(sequel_frame, text="Show only next seasons (slower search)",
+                                            font=("Arial", 12, "bold"),
+                                            text_color="#666666",
+                                            fg_color=THEME["purple"],
+                                            progress_color=THEME["pink"],
+                                            button_color=THEME["cyan"],
+                                            button_hover_color="#00b8d9",
+                                            variable=self.sequels_only_var)
+        self.sequels_only_switch.pack(pady=(2, 0))
+        self.sequels_only_switch.configure(state="disabled")
 
         # --- ACTION BUTTONS ---
         self.create_buttons(self.main_frame)
@@ -146,6 +159,14 @@ class NeonAniList(ctk.CTk):
                                text_color=THEME["text"],
                                border_color=THEME["purple"],
                                border_width=1)
+
+    def on_sequel_toggle(self):
+        """Enable or disable the sequels-only switch based on the main sequel toggle"""
+        if self.sequel_var.get():
+            self.sequels_only_switch.configure(state="normal", text_color=THEME["text"])
+        else:
+            self.sequels_only_var.set(False)
+            self.sequels_only_switch.configure(state="disabled", text_color="#666666")
 
     def create_combined_card(self, parent):
         """Create a single card with username entries on left, filters on right"""
@@ -295,6 +316,7 @@ class NeonAniList(ctk.CTk):
             per_user_seen.append(user_seen)
         
         include_sequels = self.sequel_var.get()
+        sequels_only = self.sequels_only_var.get() and include_sequels
         # For sequel mode, we need the intersection (what ALL users have seen)
         if include_sequels and per_user_seen:
             all_users_seen = set.intersection(*per_user_seen)
@@ -330,7 +352,9 @@ class NeonAniList(ctk.CTk):
         }}
         '''
 
-        while len(found_titles) < result_limit and current_page <= 15:
+        max_pages = 50 if sequels_only else 15
+
+        while len(found_titles) < result_limit and current_page <= max_pages:
             variables['page'] = current_page
             try:
                 r = requests.post('https://graphql.anilist.co', json={'query': query, 'variables': variables})
@@ -350,12 +374,14 @@ class NeonAniList(ctk.CTk):
                     if format_choice == "MOVIE":
                         # Check for problematic relationships
                         skip_movie = False
+                        is_sequel_movie = False
                         
                         for edge in anime['relations']['edges']:
                             rel_type = edge['relationType']
                             rel_format = edge['node'].get('format')
                             
                             if rel_type in ['PREQUEL', 'PARENT']:
+                                is_sequel_movie = True
                                 if include_sequels:
                                     # Allow sequel movies if all users saw the prequel chain
                                     if not self.check_prequel_chain_watched(anime, per_user_seen):
@@ -365,6 +391,7 @@ class NeonAniList(ctk.CTk):
                                     skip_movie = True
                                     break
                             
+                            # ADAPTATION and SOURCE filters always apply — these aren't about sequels
                             if rel_type == 'ADAPTATION':
                                 if rel_format in ['TV', 'OVA', 'ONA', 'SPECIAL', 'TV_SHORT']:
                                     skip_movie = True
@@ -378,8 +405,15 @@ class NeonAniList(ctk.CTk):
                         if skip_movie:
                             continue
                         
-                        # When NOT in sequel mode, filter out sequel indicators in titles
-                        if not include_sequels:
+                        # Title-based filtering for non-sequel movies (always applies)
+                        # For sequel movies that passed the chain check, only skip recaps
+                        if is_sequel_movie and include_sequels:
+                            title_romaji = anime['title']['romaji'].lower() if anime['title'].get('romaji') else ''
+                            title_english = anime['title'].get('english', '').lower() if anime['title'].get('english') else ''
+                            recap_keywords = ['recap', 'compilation', 'summary']
+                            if any(keyword in title_romaji or keyword in title_english for keyword in recap_keywords):
+                                continue
+                        else:
                             title_romaji = anime['title']['romaji'].lower() if anime['title'].get('romaji') else ''
                             title_english = anime['title'].get('english', '').lower() if anime['title'].get('english') else ''
                             skip_keywords = [
@@ -387,16 +421,12 @@ class NeonAniList(ctk.CTk):
                                 'recap', 'compilation', 'summary',
                                 ': the movie', '- the movie',
                             ]
-                            
                             if any(keyword in title_romaji or keyword in title_english for keyword in skip_keywords):
                                 continue
-                        else:
-                            # Even in sequel mode, still skip recaps/compilations
-                            title_romaji = anime['title']['romaji'].lower() if anime['title'].get('romaji') else ''
-                            title_english = anime['title'].get('english', '').lower() if anime['title'].get('english') else ''
-                            recap_keywords = ['recap', 'compilation', 'summary']
-                            if any(keyword in title_romaji or keyword in title_english for keyword in recap_keywords):
-                                continue
+                        
+                        # In sequels-only mode, skip movies that aren't sequels
+                        if sequels_only and not is_sequel_movie:
+                            continue
                         
                         found_titles.append(anime)
                     
@@ -406,8 +436,9 @@ class NeonAniList(ctk.CTk):
                         if include_sequels and self.check_prequel_chain_watched(anime, per_user_seen):
                             found_titles.append(anime)
                     else:
-                        # No prerequisite — always include (it's a first season / standalone)
-                        found_titles.append(anime)
+                        # No prerequisite — it's a first season / standalone
+                        if not sequels_only:
+                            found_titles.append(anime)
                 if not r.json()['data']['Page']['pageInfo']['hasNextPage']: break
                 current_page += 1
             except: break
