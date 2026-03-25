@@ -12,6 +12,7 @@ Enter 1–4 AniList usernames, set your filters, and get a curated list of unwat
 
 - **Single or multi-user** — works solo or with up to 4 AniList accounts for group discovery
 - **Smart sequel filtering** — skips sequels, recaps, and spin-offs so you only see fresh starting points
+- **Next-season discovery** — optional toggle that surfaces the next unwatched season of shows all participants have already seen, without skipping ahead in the chain (e.g. if everyone watched S1, S2 appears — but S3 won't show until everyone has also seen S2)
 - **Movie mode** — dedicated filter that excludes adaptations of existing TV series, compilation films, and sequel movies
 - **Configurable filters** — max episodes, result limit, min/max year
 - **Format toggle** — TV, OVA, Movie, TV+OVA, or All
@@ -44,19 +45,33 @@ Place `anigap.py`, `icon.ico`, and `build_exe.bat` in the same folder, then doub
 1. Install all dependencies + PyInstaller
 2. Bundle everything into a single `.exe`
 
-The finished executable will be at `dist/AniGap v9.exe`.
+The finished executable will be at `dist/AniGap v10.exe`.
 
 ## Usage
 
 1. Enter at least **1 AniList username** (up to 4 for group comparison)
 2. Adjust filters as needed (max episodes, year range, result limit)
 3. Pick a format (TV, OVA, Movie, TV+OVA, All)
-4. Hit **INITIATE SEARCH**
-5. Browse results — click any title to open it on AniList
+4. Toggle **"Include next unwatched seasons"** if you want to see sequels that everyone in the group is ready for
+5. Hit **INITIATE SEARCH**
+6. Browse results — click any title to open it on AniList
 
 ## How It Works
 
 The app queries the [AniList GraphQL API](https://anilist.gitbook.io/anilist-apiv2-docs/) to fetch each user's watched list, then searches for highly-rated finished anime that nobody in the group has seen. Sequels and prerequisites are automatically filtered out using relation data (prequels, parent series, adaptations) so every result is a valid entry point.
+
+When the **next-season toggle** is enabled, the app also includes sequels where every participant has completed all prerequisite seasons. It walks the full prequel chain for each candidate — so a third season only appears if all users have seen both the first and second seasons. Recaps and compilations are still filtered out regardless of the toggle.
+
+## Changelog
+
+### v10
+- Added **"Include next unwatched seasons"** toggle (defaults to off)
+- Sequel results require all users to have completed every prerequisite season in order — no skipping ahead
+- Per-user watch list tracking for accurate group sequel eligibility
+- Recursive prequel chain validation with caching for performance
+
+### v9
+- Initial public release with multi-user support, smart sequel filtering, movie mode, format toggles, and clipboard export
 
 ## License
 

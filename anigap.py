@@ -26,8 +26,8 @@ THEME = {
 class NeonAniList(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("AniGap v9")
-        self.geometry("650x780")
+        self.title("AniGap v10")
+        self.geometry("650x810")
         self.resizable(False, False)  # Disable resizing
         
         # Set window icon
@@ -91,6 +91,21 @@ class NeonAniList(ctk.CTk):
         
         # Set initial selected state
         self.set_format("TV+OVA")
+
+        # --- SEQUEL TOGGLE ---
+        sequel_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        sequel_frame.pack(pady=(2, 0))
+        
+        self.sequel_var = tk.BooleanVar(value=False)
+        self.sequel_switch = ctk.CTkSwitch(sequel_frame, text="Include next unwatched seasons",
+                                            font=("Arial", 12, "bold"),
+                                            text_color=THEME["text"],
+                                            fg_color=THEME["purple"],
+                                            progress_color=THEME["pink"],
+                                            button_color=THEME["cyan"],
+                                            button_hover_color="#00b8d9",
+                                            variable=self.sequel_var)
+        self.sequel_switch.pack()
 
         # --- ACTION BUTTONS ---
         self.create_buttons(self.main_frame)
@@ -273,8 +288,19 @@ class NeonAniList(ctk.CTk):
             formats = ["TV", "OVA", "ONA", "SPECIAL", "MOVIE"]
         
         seen = set()
+        per_user_seen = []
         for username in usernames:
-            seen |= self.fetch_seen(username)
+            user_seen = self.fetch_seen(username)
+            seen |= user_seen
+            per_user_seen.append(user_seen)
+        
+        include_sequels = self.sequel_var.get()
+        # For sequel mode, we need the intersection (what ALL users have seen)
+        if include_sequels and per_user_seen:
+            all_users_seen = set.intersection(*per_user_seen)
+        else:
+            all_users_seen = set()
+        
         current_page, found_titles = 1, []
         
         base_var_defs = ["$fmts: [MediaFormat]", "$eps: Int", "$page: Int"]
@@ -314,7 +340,7 @@ class NeonAniList(ctk.CTk):
                     if len(found_titles) >= result_limit: break
                     if anime['id'] in seen or anime['nextAiringEpisode']: continue
                     
-                    # Check if this anime has any prequels or parent series (skip all sequels/spin-offs)
+                    # Check if this anime has any prequels or parent series
                     has_prerequisite = any(
                         e['relationType'] in ['PREQUEL', 'PARENT']
                         for e in anime['relations']['edges']
@@ -329,22 +355,21 @@ class NeonAniList(ctk.CTk):
                             rel_type = edge['relationType']
                             rel_format = edge['node'].get('format')
                             
-                            # Always skip if there's a PREQUEL or PARENT (this movie is a sequel)
                             if rel_type in ['PREQUEL', 'PARENT']:
-                                skip_movie = True
-                                break
+                                if include_sequels:
+                                    # Allow sequel movies if all users saw the prequel chain
+                                    if not self.check_prequel_chain_watched(anime, per_user_seen):
+                                        skip_movie = True
+                                        break
+                                else:
+                                    skip_movie = True
+                                    break
                             
-                            # For ADAPTATION: this movie is adapting something
-                            # Skip if it's adapting a TV/OVA/ONA show (not manga/novel)
                             if rel_type == 'ADAPTATION':
                                 if rel_format in ['TV', 'OVA', 'ONA', 'SPECIAL', 'TV_SHORT']:
                                     skip_movie = True
                                     break
-                                # If it's adapting MANGA, NOVEL, ONE_SHOT, LIGHT_NOVEL - that's fine!
                             
-                            # For SOURCE: something else adapted this movie's source material
-                            # If a TV show has the same source (e.g., both the movie and a TV show adapted the same manga)
-                            # We want to skip this because it means there's a related TV series
                             if rel_type == 'SOURCE':
                                 if rel_format in ['TV', 'OVA', 'ONA', 'SPECIAL', 'TV_SHORT']:
                                     skip_movie = True
@@ -353,24 +378,35 @@ class NeonAniList(ctk.CTk):
                         if skip_movie:
                             continue
                         
-                        # Also filter out common sequel/recap indicators in the title
-                        title_romaji = anime['title']['romaji'].lower() if anime['title'].get('romaji') else ''
-                        title_english = anime['title'].get('english', '').lower() if anime['title'].get('english') else ''
-                        skip_keywords = [
-                            'season', 'part', 'vol', 'volume', 'arc',
-                            'recap', 'compilation', 'summary',
-                            ': the movie', '- the movie',
-                        ]
+                        # When NOT in sequel mode, filter out sequel indicators in titles
+                        if not include_sequels:
+                            title_romaji = anime['title']['romaji'].lower() if anime['title'].get('romaji') else ''
+                            title_english = anime['title'].get('english', '').lower() if anime['title'].get('english') else ''
+                            skip_keywords = [
+                                'season', 'part', 'vol', 'volume', 'arc',
+                                'recap', 'compilation', 'summary',
+                                ': the movie', '- the movie',
+                            ]
+                            
+                            if any(keyword in title_romaji or keyword in title_english for keyword in skip_keywords):
+                                continue
+                        else:
+                            # Even in sequel mode, still skip recaps/compilations
+                            title_romaji = anime['title']['romaji'].lower() if anime['title'].get('romaji') else ''
+                            title_english = anime['title'].get('english', '').lower() if anime['title'].get('english') else ''
+                            recap_keywords = ['recap', 'compilation', 'summary']
+                            if any(keyword in title_romaji or keyword in title_english for keyword in recap_keywords):
+                                continue
                         
-                        # Skip if either title contains indicators it's part of a series
-                        if any(keyword in title_romaji or keyword in title_english for keyword in skip_keywords):
-                            continue
-                        
-                        # Passed all movie filters
                         found_titles.append(anime)
                     
-                    # For non-movies, use the same logic: skip anything with a prequel/parent
-                    elif not has_prerequisite:
+                    # For non-movies
+                    elif has_prerequisite:
+                        # This is a sequel — only include if sequel mode is on and chain is watched
+                        if include_sequels and self.check_prequel_chain_watched(anime, per_user_seen):
+                            found_titles.append(anime)
+                    else:
+                        # No prerequisite — always include (it's a first season / standalone)
                         found_titles.append(anime)
                 if not r.json()['data']['Page']['pageInfo']['hasNextPage']: break
                 current_page += 1
@@ -463,6 +499,85 @@ class NeonAniList(ctk.CTk):
             r = requests.post('https://graphql.anilist.co', json={'query':q, 'variables':{'u':user}})
             return {e['mediaId'] for lst in r.json()['data']['MediaListCollection']['lists'] for e in lst['entries']}
         except: return set()
+
+    def fetch_prequel_ids(self, anime_id):
+        """Return the set of direct prequel/parent IDs for a given anime using the API."""
+        q = '''
+        query($id: Int) {
+          Media(id: $id) {
+            relations {
+              edges {
+                relationType
+                node { id format }
+              }
+            }
+          }
+        }
+        '''
+        try:
+            r = requests.post('https://graphql.anilist.co', json={'query': q, 'variables': {'id': anime_id}})
+            data = r.json()['data']['Media']
+            prequel_ids = set()
+            for edge in data['relations']['edges']:
+                if edge['relationType'] in ['PREQUEL', 'PARENT']:
+                    prequel_ids.add(edge['node']['id'])
+            return prequel_ids
+        except:
+            return set()
+
+    def check_prequel_chain_watched(self, anime, per_user_seen, _cache=None):
+        """
+        Check if all prequels in the chain have been watched by ALL users.
+        Returns True only if:
+        - This anime HAS at least one prequel/parent
+        - Every prequel is in every user's seen list
+        - Each prequel's own prequels are also all watched (recursively)
+        This ensures no season in the chain is skipped.
+        """
+        if _cache is None:
+            _cache = {}
+
+        # Get direct prequel IDs from the anime's relation edges
+        prequel_ids = set()
+        for edge in anime.get('relations', {}).get('edges', []):
+            if edge['relationType'] in ['PREQUEL', 'PARENT']:
+                prequel_ids.add(edge['node']['id'])
+
+        if not prequel_ids:
+            # No prequels — this is a first season / standalone; not a sequel
+            return False
+
+        # Check that ALL users have seen ALL direct prequels
+        for prequel_id in prequel_ids:
+            for user_seen in per_user_seen:
+                if prequel_id not in user_seen:
+                    return False
+
+            # Now check that the prequel's own prequels are also all watched
+            if prequel_id in _cache:
+                if not _cache[prequel_id]:
+                    return False
+                continue
+
+            ancestor_prequels = self.fetch_prequel_ids(prequel_id)
+            if ancestor_prequels:
+                # The prequel has its own prequels — they must all be watched too
+                for ancestor_id in ancestor_prequels:
+                    for user_seen in per_user_seen:
+                        if ancestor_id not in user_seen:
+                            _cache[prequel_id] = False
+                            return False
+                # Recurse further up: build a fake anime dict for the recursive call
+                fake_anime = {'relations': {'edges': [
+                    {'relationType': 'PREQUEL', 'node': {'id': aid}} for aid in ancestor_prequels
+                ]}}
+                if not self.check_prequel_chain_watched(fake_anime, per_user_seen, _cache):
+                    _cache[prequel_id] = False
+                    return False
+            
+            _cache[prequel_id] = True
+
+        return True
 
     def copy_to_clipboard(self):
         # Build text from stored result data, including URLs

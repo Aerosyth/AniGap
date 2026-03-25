@@ -21,7 +21,7 @@ py -m PyInstaller ^
     --noconfirm ^
     --onefile ^
     --windowed ^
-    --name "AniGap v9" ^
+    --name "AniGap v10" ^
     --icon "icon.ico" ^
     --add-data "icon.ico;." ^
     --add-data "%CTK_PATH%;customtkinter/" ^
@@ -40,6 +40,6 @@ if errorlevel 1 (
 echo.
 echo ============================================
 echo   SUCCESS! Your EXE is in the dist\ folder
-echo   dist\AniGap v9.exe
+echo   dist\AniGap v10.exe
 echo ============================================
 pause
