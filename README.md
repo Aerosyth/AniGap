@@ -66,21 +66,6 @@ When the **next-season toggle** is enabled, the app also includes sequels where 
 
 When the **sequels-only toggle** is enabled on top of that, the app filters out all new series entirely and shows only next seasons you're ready to continue. Because qualifying results are rarer, the search scans up to 50 pages (vs. the normal 15) to fill your result limit. This applies to all formats including movies.
 
-## Changelog
-
-### v10
-- Added **"Include next unwatched seasons"** toggle (defaults to off)
-- Added **"Show only next seasons"** toggle for sequel-exclusive results (requires the first toggle to be on)
-- Sequel results require all users to have completed every prerequisite season in order — no skipping ahead
-- Per-user watch list tracking for accurate group sequel eligibility
-- Recursive prequel chain validation with caching for performance
-- Fixed movie filtering when sequel toggle is on — adaptation and source-material filters now always apply; title keyword filtering only relaxes for genuine sequel movies
-- Sequels-only mode scans up to 50 pages (vs. 15) to fill your result limit across all formats
-- "Show only next seasons" label indicates slower search time
-
-### v9
-- Initial public release with multi-user support, smart sequel filtering, movie mode, format toggles, and clipboard export
-
 ## License
 
 This project is provided as-is for personal use.
