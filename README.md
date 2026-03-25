@@ -62,17 +62,6 @@ The app queries the [AniList GraphQL API](https://anilist.gitbook.io/anilist-api
 
 When the **next-season toggle** is enabled, the app also includes sequels where every participant has completed all prerequisite seasons. It walks the full prequel chain for each candidate — so a third season only appears if all users have seen both the first and second seasons. Recaps and compilations are still filtered out regardless of the toggle.
 
-## Changelog
-
-### v10
-- Added **"Include next unwatched seasons"** toggle (defaults to off)
-- Sequel results require all users to have completed every prerequisite season in order — no skipping ahead
-- Per-user watch list tracking for accurate group sequel eligibility
-- Recursive prequel chain validation with caching for performance
-
-### v9
-- Initial public release with multi-user support, smart sequel filtering, movie mode, format toggles, and clipboard export
-
 ## License
 
 This project is provided as-is for personal use.
